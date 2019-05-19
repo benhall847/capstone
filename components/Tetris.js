@@ -20,6 +20,7 @@ export class Tetris extends Component {
             gameSpeed:1000,
             defaultSpeed:1000,
             fastSpeed:100,
+            stepCounter:0
 
         }
     }
@@ -67,36 +68,54 @@ export class Tetris extends Component {
             }, this.state.gameSpeed)
         })
     }
+    
     _moveFigure = ()=>{
-        let freezeFlag = false
+        let freezeFlag = this._isFigureMovable()
+        console.log(freezeFlag)
         if (!freezeFlag){
             let stepFigure = {...this.state.currentFigure}
             stepFigure.path = stepFigure.path.map((eaPathArray)=>{
                 return [eaPathArray[0], eaPathArray[1] + 1]
             })
 
-
-
             this.setState({currentFigure:{...stepFigure}}, this._updateBoard)
         }
     }
+    _isFigureMovable = ()=>{
+        let freezeFlag = false
+        this.state.board.map((eaRow, rowIndex)=>{
+            eaRow.map((eaCell, cellIndex)=>{
+                this.state.currentFigure.path.map(activeCell =>{
+
+                    let isBoardCellFilled = (eaCell.active === 'filled')
+                    let willFigureCollide = (activeCell[0] === cellIndex && activeCell[1] === rowIndex)
+                    let willBoardEnd = (activeCell[1]+1 === this.state.board.length)
+
+                    if(willBoardEnd){
+                        freezeFlag = true
+                    }
+                    if (isBoardCellFilled && willFigureCollide){
+                        freezeFlag = true
+                    }
+                })
+            })
+        })
+        return freezeFlag
+    }
     _updateBoard = ()=>{
         const {currentFigure} = this.state
-        console.log(currentFigure)
         let activeBoard = this.state.board.map(row =>{
             return row.map(eaObj => eaObj.active === 'active' ? {type:'empty', active:''} : eaObj)
         })
         // console.log(activeBoard)
         // console.log(currentFigure)
         this.state.currentFigure.path.forEach(eaPathArray=>{
-
                 activeBoard[eaPathArray[1]][eaPathArray[0]] = {...currentFigure, active:'active'}
-
         })
 
         this.setState({
             board:activeBoard,
-            
+            stepCounter: this.state.stepCounter + 1
         })
     }
     
