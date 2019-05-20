@@ -14,6 +14,7 @@ export default class LogInScreen extends React.Component {
        <View>
 
          <LogIn />
+       
        </View>
        
     );
@@ -24,6 +25,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 15,
+    paddingBottom: 15,
+    height: 100,
     backgroundColor: '#fff',
   },
 });
