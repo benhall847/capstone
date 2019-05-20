@@ -1,13 +1,16 @@
-import React, { Component } from 'react'
-import {View, Text} from 'react-native'
-import Row from './Row'
-import {Figures} from '../assets/figures/Figures'
+import React, { Component } from 'react';
+import { View, PanResponder, Dimensions, TouchableOpacity } from 'react-native';
+import Row from './Row';
+import { Figures } from '../assets/figures/Figures';
+
+
 
 
 
 export class Tetris extends Component {
     constructor(props){
         super(props);
+        this.position = (0, 0);
         this.state={
             board:[],
             height:15,
@@ -17,19 +20,52 @@ export class Tetris extends Component {
             score:0,
             isLoser:false,
             isWinner:false,
-            gameSpeed:1000,
-            defaultSpeed:1000,
+            gameSpeed:100000,
+            defauldtSpeed:1000,
             fastSpeed:100,
 
         }
     }
+    
     componentDidMount(){
-        this._createBoard()
+        this._createBoard(),
+        this._panResponder =  () => {PanResponder.create({
+            onStartShouldSetPanResponder: (evt, gestureState) => true,
+            onPanResponderMove: (evt, gestureState) => {
+            //     this.position.setValue({x: gestureState.dx, y: gestureState.dy})
+            // }, onPanResponderRelease: (evt, gestureState) => {
+            //     if (gestureState.dy > -12) {
+            //         console.log('swiped up');
+            //     }
+                console.warn("Swipe Moves", gestureState);
+            
+            }       
+        });}
     }
+    // _panResponder = PanResponder.create({
+    //     onStartShouldSetPanResponder: (evt, gestureState) => true,
+    //     onStartShouldSetPanResponderCapture: (evt, gestureState) => true,
+    //     onMoveShouldSetPanResponder: (evt, gestureState) => true,
+    //     onMoveShouldSetPanResponderCapture: (evt, gestureState) => true,
+
+    //     onPanResponderGrant: (evt, gestureState) => {
+    //         console.log('Grant');
+    //     },
+    //     onPanResponderMove: (evt, gestureState) => {
+    //         console.log('Move');
+    //     },
+    //     onPanResponderTerminationRequest: (evt, gestureState) => true,
+    //     onPanResponderRelease: (evt, gestureState) => {
+    //         console.log('Release');
+    //     },
+    //     onPanResponderTerminate: (evt, gestureState) => {
+    //         return true;
+    //     }
+    // })
 
 
     _mapFirstPieceToBoard= ()=>{
-        let myFigure = Figures[6];
+        let myFigure = Figures[Math.floor(Math.random() * 18)];
         let updatedBoard = this.state.board;
         myFigure.path.forEach((eaArray)=>{
             updatedBoard[eaArray[1]][eaArray[0]] = {...myFigure, active:'active'}
@@ -37,8 +73,6 @@ export class Tetris extends Component {
 
         this.setState({board:updatedBoard, currentFigure:myFigure}, this._gameLoop)
     }
-
-
 
     _createBoard = ()=>{
         const {board, height, width} = this.state
@@ -58,7 +92,11 @@ export class Tetris extends Component {
     _returnBoard = ()=>{
         return (this.state.board.map((eaRow, i)=><Row row={eaRow} key={i}/>))
     }
+    
+   
 
+    
+    
     _gameLoop = ()=>{
         this.setState({
             interval:setInterval(()=>{
@@ -99,20 +137,35 @@ export class Tetris extends Component {
             
         })
     }
+
+    // _moveFast = (e) => {
+    //     // if they swipe down
+    //     //then gameSpeed = this.state.fastSpeed
+    // }
     
 
 
     render() {
         return (
-        <View style={styles.boardContainer}>
+        // <View style={styles.boardContainer} {...this._panResponder.panHandlers}>
+        <View style={styles.boardContainer} >
             {this.state.board.length > 0 ? this._returnBoard() : null}
+            {/* <View {...this._panResponder.panHandlers}> */}
+            
+                 
+            {/* </View> */}
+         {/* <TouchableOpacity  onPress={() => {
+                console.log('you pressed the Touch');
+            }}>
+                <Image style={styles.img} source={require('../images/robots-dev.png')}/>
+            </TouchableOpacity> */}
         </View>
         )
     }
 }
 
 const styles ={
-    boardContainer:{
+    boardContainer: {
         flex:1,
         justifyContent:'center',
         alignItems:'center'
