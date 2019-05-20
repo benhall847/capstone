@@ -20,8 +20,8 @@ const styles ={
         flexDirection:'row'
     },
     cell:{
-        width:20,
-        height:20,
+        width:25,
+        height:25,
         backgroundColor:'white',
         borderWidth: 0.5,
         borderColor:'black'
