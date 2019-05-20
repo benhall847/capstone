@@ -5,6 +5,7 @@ import {Figures} from '../assets/figures/Figures'
 
 
 
+
 export class Tetris extends Component {
     constructor(props){
         super(props);
@@ -20,6 +21,8 @@ export class Tetris extends Component {
             gameSpeed:1000,
             defaultSpeed:1000,
             fastSpeed:100,
+            interval:null,
+            rotate:false
 
         }
     }
@@ -29,13 +32,13 @@ export class Tetris extends Component {
 
 
     _mapFirstPieceToBoard= ()=>{
-        let myFigure = Figures[6];
+        let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
         let updatedBoard = this.state.board;
-        myFigure.path.forEach((eaArray)=>{
-            updatedBoard[eaArray[1]][eaArray[0]] = {...myFigure, active:'active'}
+        randomFigure.path.forEach((eaArray)=>{
+            updatedBoard[eaArray[1]][eaArray[0]] = {...randomFigure, active:'active'}
         })
 
-        this.setState({board:updatedBoard, currentFigure:myFigure}, this._gameLoop)
+        this.setState({board:updatedBoard, currentFigure:randomFigure}, this._gameLoop)
     }
 
 
@@ -62,42 +65,181 @@ export class Tetris extends Component {
     _gameLoop = ()=>{
         this.setState({
             interval:setInterval(()=>{
-                this._moveFigure()
-
+                this._moveRight({keyCode:39})
+                this._loopLogic()
             }, this.state.gameSpeed)
         })
     }
-    _moveFigure = ()=>{
-        let freezeFlag = false
-        if (!freezeFlag){
-            let stepFigure = {...this.state.currentFigure}
-            stepFigure.path = stepFigure.path.map((eaPathArray)=>{
-                return [eaPathArray[0], eaPathArray[1] + 1]
-            })
+
+    
+    _loopLogic = ()=>{
+        let isFigureMovable = this._isFigureMovable()
+        if(this.state.currentFigure){
+            this._checkForNextFigure()
+            
+            if (isFigureMovable){
+                this._moveCurrentFigure()
+            
+            }else{
+                let filledBoard = this.state.board.map(eaRow => eaRow.map(eaCell => eaCell.active === 'active' ? {...eaCell, active:'filled'} : eaCell))
+
+                this.setState({
+                    currentFigure:{...this.state.nextFigure, active:"active"},
+                    board:filledBoard,
+                    nextFigure:null
+                })
+            }
+        
+        } else{
+            let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
+            this.setState({currentFigure:randomFigure})
+        }
+        if (this.state.rotate) {
+            this._rotateFigure()
+        }
+        
+
+        this._updateBoard()
+    }
+
+    _moveCurrentFigure = ()=>{
+        let stepFigure = {...this.state.currentFigure}
+        stepFigure.path = stepFigure.path.map((eaPathArray)=>{
+            return [eaPathArray[0], eaPathArray[1] + 1]
+        })
+        this.setState({currentFigure:{...stepFigure, active:"active"}})
+    }
 
 
+    _checkForNextFigure = ()=>{
+        if (!this.state.nextFigure){
 
-            this.setState({currentFigure:{...stepFigure}}, this._updateBoard)
+            let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
+
+            this.setState({nextFigure:{...randomFigure}})
         }
     }
+
+    _isFigureMovable = ()=>{
+        let isMovable = true
+        this.state.board.map((eaRow, rowIndex)=>{
+            eaRow.map((eaCell, cellIndex)=>{
+                this.state.currentFigure.path.map(activeCell =>{
+
+                    let isBoardCellFilled = (eaCell.active === 'filled')
+                    let willFigureCollide = (activeCell[0] === cellIndex && activeCell[1] + 1 === rowIndex)
+                    let willBoardEnd = (activeCell[1]+1 === this.state.board.length)
+
+                    if(willBoardEnd){
+                        isMovable = false
+                    }
+                    if (isBoardCellFilled && willFigureCollide){
+                        isMovable = false
+                    }
+                })
+            })
+        })
+        return isMovable
+    }
+    _moveLeft = e=>{
+        const {currentFigure, board} = this.state
+        if(e.keyCode !== 37 || !currentFigure){
+            return null
+        }
+        let canMoveLeft = true;
+        currentFigure.path.map(eaPath =>{
+            if (!(eaPath[0] - 1 >= 0)|| (board[eaPath[1]][eaPath[0] - 1].active === 'filled')){
+                canMoveLeft = false;
+            }
+        })
+        if (canMoveLeft){
+
+            let myPath = currentFigure.path.map(eaFig=>[eaFig[0] - 1, eaFig[1]])
+            this.setState({currentFigure: {...this.state.currentFigure, path:myPath, active:"active"}},this._updateBoard)
+        }
+    }
+    _moveRight = e=>{
+        const {currentFigure, board, width} = this.state
+
+        if(e.keyCode !== 39 || !currentFigure){
+            return null
+        }
+        let canMoveRight = true;
+        currentFigure.path.map(eaPath =>{
+            if (!(eaPath[0] + 1 < width)|| (board[eaPath[1]][eaPath[0] + 1].active === 'filled')){
+                canMoveRight = false;
+            }
+            
+        })
+            if (canMoveRight){
+
+            let myPath = currentFigure.path.map(eaFig=>[eaFig[0] + 1, eaFig[1]])
+            this.setState({currentFigure: {...this.state.currentFigure, path:myPath, active:"active"}},this._updateBoard)
+        }
+    }
+
+    _rotateFigure = ()=>{
+        const {currentFigure, width, board} = this.state
+
+        let defaultFigure = Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id))
+
+        let offsetLeft = currentFigure.path[0][0] - defaultFigure.path[0][0]
+        let offsetTop = currentFigure.path[0][1] - defaultFigure.path[0][1]
+
+        let nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id + 1))}
+        if (!nextFigure.id){
+            nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === 1))}
+        }
+        let canRotate = false;
+
+        nextFigure.path = nextFigure.path.map(eaPath => [eaPath[0] + offsetLeft, eaPath[1] + offsetTop])
+
+        nextFigure.path.map(eaPath =>{
+            if ((eaPath[0] >= 0) || (eaPath[0] < width) || !board[eaPath[1]][eaPath[0]].active === 'filled'){
+                canRotate = true;
+            }
+        })
+
+        if (nextFigure && canRotate){
+            this.setState({
+                currentFigure:{...nextFigure, active:"active"}
+            })
+        }
+        
+        
+        
+    }
+
     _updateBoard = ()=>{
         const {currentFigure} = this.state
-        console.log(currentFigure)
         let activeBoard = this.state.board.map(row =>{
             return row.map(eaObj => eaObj.active === 'active' ? {type:'empty', active:''} : eaObj)
         })
-        // console.log(activeBoard)
-        // console.log(currentFigure)
-        this.state.currentFigure.path.forEach(eaPathArray=>{
-
+        let willCurrentFigureCollide = false
+        this.state.currentFigure.path.map(eaPathArray=>{
+            let eaCell = activeBoard[eaPathArray[1]][eaPathArray[0]]
+            if(eaCell.active !== 'filled'){
                 activeBoard[eaPathArray[1]][eaPathArray[0]] = {...currentFigure, active:'active'}
+                
+            }else{
+                clearInterval(this.state.interval)
+                this.setState({isLoser:true})
+                willCurrentFigureCollide = true
+                
+            }
 
-        })
-
-        this.setState({
-            board:activeBoard,
             
+                
         })
+        if(!willCurrentFigureCollide){
+            this.setState({
+                board:activeBoard,
+                rotate:false
+            })
+        }
+
+
+
     }
     
 
@@ -120,3 +262,6 @@ const styles ={
 }
 
 export default Tetris
+
+
+
