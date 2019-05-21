@@ -22,7 +22,8 @@ export class Tetris extends Component {
             defaultSpeed:1000,
             fastSpeed:100,
             interval:null,
-            rotate:false
+            rotate:false,
+            figureTypes:['horse','romb2','romb1','cube','line']
 
         }
     }
@@ -32,13 +33,18 @@ export class Tetris extends Component {
 
 
     _mapFirstPieceToBoard= ()=>{
-        let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
+        const {figureTypes} = this.state
+
+        let randomFigure = figureTypes[Math.floor(Math.random() * figureTypes.length)]
+
+        let currentFigure = Figures.find(eaObj=> eaObj.type === randomFigure)
+        console.log(currentFigure)
         let updatedBoard = this.state.board;
-        randomFigure.path.forEach((eaArray)=>{
+        currentFigure.path.forEach((eaArray)=>{
             updatedBoard[eaArray[1]][eaArray[0]] = {...randomFigure, active:'active'}
         })
 
-        this.setState({board:updatedBoard, currentFigure:randomFigure}, this._gameLoop)
+        this.setState({board:updatedBoard, currentFigure:{...currentFigure}}, this._gameLoop)
     }
 
 
@@ -75,16 +81,10 @@ export class Tetris extends Component {
     _loopLogic = ()=>{
         let isFigureMovable = this._isFigureMovable()
         if(this.state.currentFigure){
-
-
                 // this._checkGameSpeed()
-            
-
             this._checkForNextFigure()
-            
             if (isFigureMovable){
                 this._moveCurrentFigure()
-            
             }else{
                 let filledBoard = this.state.board.map(eaRow => eaRow.map(eaCell => eaCell.active === 'active' ? {...eaCell, active:'filled'} : eaCell))
 
@@ -94,14 +94,14 @@ export class Tetris extends Component {
                     nextFigure:null
                 })
             }
-        
         } else{
-            let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
-            this.setState({currentFigure:randomFigure})
-        }
-        
-        
+            const {figureTypes} = this.state
 
+            let randomFigure = figureTypes[Math.floor(Math.random() * figureTypes.length)]
+
+            let currentFigure = Figures.find(eaObj=> eaObj.type === randomFigure)
+            this.setState({currentFigure})
+        }
         this._updateBoard()
     }
 
@@ -125,10 +125,13 @@ export class Tetris extends Component {
 
     _checkForNextFigure = ()=>{
         if (!this.state.nextFigure){
+            const {figureTypes} = this.state
 
-            let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
+            let randomFigure = figureTypes[Math.floor(Math.random() * figureTypes.length)]
 
-            this.setState({nextFigure:{...randomFigure}})
+            let nextFigure = Figures.find(eaObj=> eaObj.type === randomFigure)
+
+            this.setState({nextFigure})
         }
     }
 
@@ -190,61 +193,58 @@ export class Tetris extends Component {
         }
     }
     _defaultSpeed = ()=>{
-            clearInterval(this.state.interval)
-                this.setState({
-                    gameSpeed:this.state.defaultSpeed,
-                    loopComplete:false
-                }, ()=>{
-                    this._gameLoop()
-                })
-        }
 
-    }
-    _moveDown = ()=>{
-        if(this.state.loopComplete){
-            clearInterval(this.state.interval)
-            this.setState({
-                gameSpeed: this.state.fastSpeed,
-                loopComplete:false
-            }, ()=>{
-                this._gameLoop()
-            })
-
-        }
-
-    }
-
-    _rotateFigure = ()=>{
-        const {currentFigure, width, board} = this.state
-
-        let defaultFigure = Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id))
-
-        let offsetLeft = currentFigure.path[1][0] - defaultFigure.path[1][0]
-        let offsetTop = currentFigure.path[1][1] - defaultFigure.path[1][1]
-
-        let nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id + 1))}
-        if (!nextFigure.id){
-            nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === 1))}
-        }
-        let canRotate = true;
-
-        nextFigure.path = nextFigure.path.map(eaPath => [eaPath[0] + offsetLeft, eaPath[1] + offsetTop])
-
-        nextFigure.path.map(eaPath =>{
-
-            if (!(eaPath[0] >= 0) || !(eaPath[0] < width) || board[eaPath[1]][eaPath[0]].active === 'filled'){
-                canRotate = false
-            }
+        clearInterval(this.state.interval)
+        this.setState({
+            gameSpeed:this.state.defaultSpeed
+        }, ()=>{
+            this._gameLoop()
         })
 
-        if (nextFigure && canRotate){
-            this.setState({
-                currentFigure:{...nextFigure, active:"active"}
-            }, this._updateBoard)
+    }
+
+
+    _moveDown = ()=>{
+        clearInterval(this.state.interval)
+        this.setState({
+            gameSpeed: this.state.fastSpeed
+        }, ()=>{
+            this._gameLoop()
+        })
+
+    }
+
+    
+
+    _rotateFigure = ()=>{
+        let isFigureMovable = this._isFigureMovable()
+        if(isFigureMovable){
+
+            const {currentFigure, width, board} = this.state
+    
+            let defaultFigure = Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id))
+            let offsetLeft = currentFigure.path[1][0] - defaultFigure.path[1][0]
+            let offsetTop = currentFigure.path[1][1] - defaultFigure.path[1][1]
+            
+            let nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id + 1))}
+            if (!nextFigure.id){
+                nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === 1))}
+            }
+            let canRotate = true;
+    
+            nextFigure.path = nextFigure.path.map(eaPath => [eaPath[0] + offsetLeft, eaPath[1] + offsetTop])
+    
+            nextFigure.path.map(eaPath =>{
+                if (!(eaPath[0] >= 0) || !(eaPath[0] < width) || board[eaPath[1]][eaPath[0]].active === 'filled'){
+                    canRotate = false
+                }
+            })
+            if (nextFigure && canRotate){
+                this.setState({
+                    currentFigure:{...nextFigure, active:"active"}
+                }, this._updateBoard)
+            }
         }
-        
-        
-        
     }
 
     _updateBoard = ()=>{
@@ -267,8 +267,7 @@ export class Tetris extends Component {
         if(!willCurrentFigureCollide){
             this.setState({
                 board:activeBoard,
-                rotate:false,
-                loopComplete:true
+                rotate:false
             })
         }
     }
