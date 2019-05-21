@@ -1,5 +1,5 @@
 import React, { Component } from 'react'
-import {View, Text} from 'react-native'
+import {View, Button, Text, TouchableOpacity} from 'react-native'
 import Row from './Row'
 import {Figures} from '../assets/figures/Figures'
 
@@ -65,8 +65,8 @@ export class Tetris extends Component {
     _gameLoop = ()=>{
         this.setState({
             interval:setInterval(()=>{
-                this._moveRight({keyCode:39})
                 this._loopLogic()
+                this._checkRows()
             }, this.state.gameSpeed)
         })
     }
@@ -75,6 +75,11 @@ export class Tetris extends Component {
     _loopLogic = ()=>{
         let isFigureMovable = this._isFigureMovable()
         if(this.state.currentFigure){
+
+
+                // this._checkGameSpeed()
+            
+
             this._checkForNextFigure()
             
             if (isFigureMovable){
@@ -94,9 +99,7 @@ export class Tetris extends Component {
             let randomFigure = Figures[Math.floor(Math.random() * Figures.length)]
             this.setState({currentFigure:randomFigure})
         }
-        if (this.state.rotate) {
-            this._rotateFigure()
-        }
+        
         
 
         this._updateBoard()
@@ -108,6 +111,15 @@ export class Tetris extends Component {
             return [eaPathArray[0], eaPathArray[1] + 1]
         })
         this.setState({currentFigure:{...stepFigure, active:"active"}})
+    }
+    _checkGameSpeed = ()=>{
+        const {speed, defaultSpeed} = this.state
+        if (speed !== defaultSpeed){
+            this.setState({gameSpeed:defaultSpeed})
+            clearInterval(this.state.interval)
+            this._gameLoop()
+            return
+        }
     }
 
 
@@ -177,33 +189,58 @@ export class Tetris extends Component {
             this.setState({currentFigure: {...this.state.currentFigure, path:myPath, active:"active"}},this._updateBoard)
         }
     }
+    _defaultSpeed = ()=>{
+            clearInterval(this.state.interval)
+                this.setState({
+                    gameSpeed:this.state.defaultSpeed,
+                    loopComplete:false
+                }, ()=>{
+                    this._gameLoop()
+                })
+        }
+
+    }
+    _moveDown = ()=>{
+        if(this.state.loopComplete){
+            clearInterval(this.state.interval)
+            this.setState({
+                gameSpeed: this.state.fastSpeed,
+                loopComplete:false
+            }, ()=>{
+                this._gameLoop()
+            })
+
+        }
+
+    }
 
     _rotateFigure = ()=>{
         const {currentFigure, width, board} = this.state
 
         let defaultFigure = Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id))
 
-        let offsetLeft = currentFigure.path[0][0] - defaultFigure.path[0][0]
-        let offsetTop = currentFigure.path[0][1] - defaultFigure.path[0][1]
+        let offsetLeft = currentFigure.path[1][0] - defaultFigure.path[1][0]
+        let offsetTop = currentFigure.path[1][1] - defaultFigure.path[1][1]
 
         let nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === currentFigure.id + 1))}
         if (!nextFigure.id){
             nextFigure = {...Figures.find(eaFigure => (eaFigure.type === currentFigure.type && eaFigure.id === 1))}
         }
-        let canRotate = false;
+        let canRotate = true;
 
         nextFigure.path = nextFigure.path.map(eaPath => [eaPath[0] + offsetLeft, eaPath[1] + offsetTop])
 
         nextFigure.path.map(eaPath =>{
-            if ((eaPath[0] >= 0) || (eaPath[0] < width) || !board[eaPath[1]][eaPath[0]].active === 'filled'){
-                canRotate = true;
+
+            if (!(eaPath[0] >= 0) || !(eaPath[0] < width) || board[eaPath[1]][eaPath[0]].active === 'filled'){
+                canRotate = false
             }
         })
 
         if (nextFigure && canRotate){
             this.setState({
                 currentFigure:{...nextFigure, active:"active"}
-            })
+            }, this._updateBoard)
         }
         
         
@@ -225,29 +262,97 @@ export class Tetris extends Component {
                 clearInterval(this.state.interval)
                 this.setState({isLoser:true})
                 willCurrentFigureCollide = true
-                
             }
-
-            
-                
         })
         if(!willCurrentFigureCollide){
             this.setState({
                 board:activeBoard,
-                rotate:false
+                rotate:false,
+                loopComplete:true
             })
         }
-
-
-
     }
-    
+    _checkRows = ()=> {
+        const {board, width} = this.state
+        let fullRows = []
+        board.map((row, rowIndex) => {
+            let eaRow = row.map(eaObj=> eaObj.active)
+            if (eaRow.indexOf('') === -1 && eaRow.indexOf('active') === -1) {
+                fullRows.push(rowIndex)
+            }
+        });
+        if(fullRows.length){
+            let updatedBoard = board
+            fullRows.forEach(rowIndex=>{
+                updatedBoard.splice(rowIndex, 1)
+                let newRow = []
+                for (let x = 0; x< width; x++){
+                    newRow[x] = {
+                                        type:'empty',
+                                        active: ''
+                                    }
+                }
+                updatedBoard.unshift(newRow)
+            })
+            this.setState({board:updatedBoard})
+        }
+    }
+
 
 
     render() {
         return (
-        <View style={styles.boardContainer}>
-            {this.state.board.length > 0 ? this._returnBoard() : null}
+        <View style={styles.page}>
+            <View style={styles.boardContainer}>
+                {this.state.board.length > 0 ? this._returnBoard() : null}
+            </View>
+            <View style={styles.controllerContainer}>
+                <View>
+                    <Button 
+                        onPress={()=>{
+                            this._rotateFigure()
+                        }}
+                        title=" ^ "
+                        color="#841584"
+                        accessibilityLabel="Rotate"
+                    />
+                </View>
+                <Text>   </Text>
+                <View style={styles.buttonContainer}>
+
+                    <Button 
+                        onPress={()=>{
+                            this._moveLeft({keyCode:37})
+                        }}
+                        title="  <  "
+                        color="#841584"
+                        accessibilityLabel="Move left"
+                    />
+                    <Text>   </Text>
+                    <Button 
+                        onPress={()=>{
+                            this._moveRight({keyCode:39})
+                        }}
+                        title="  >  "
+                        color="#841584"
+                        accessibilityLabel="Move right"
+                    />
+                </View>
+                <View>
+                    <Text> </Text>
+                    <TouchableOpacity
+                        onPressIn={()=>{this._moveDown()}}
+                        onPressOut={()=>{this._defaultSpeed()}}
+                        accessibilityLabel="Move down"
+                        color="#841584"
+                    >   
+                        <Text
+                        style={styles.button}
+                        >{"           V  "}</Text>
+                    </TouchableOpacity>
+                </View>
+            </View>
+            <Text>   </Text>
         </View>
         )
     }
@@ -258,7 +363,26 @@ const styles ={
         flex:1,
         justifyContent:'center',
         alignItems:'center'
+    },
+    page:{
+        flex:1,
+        alignItems:'center',
+        justifyContent:'center'
+    },
+    controllerContainer:{
+        flex:0,
+        flexDirection:'column'
+    },
+    buttonContainer:{
+        flex:0,
+        flexDirection:'row'
+    },
+    button:{
+        backgroundColor:"#841584",
+        color:"white"
     }
+    
+    
 }
 
 export default Tetris
